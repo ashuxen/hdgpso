@@ -1,0 +1,86 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.eggs/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+build/
+dist/
+*.egg
+.python-version
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Benchmark outputs (large, regenerable)
+results/
+results_*/
+report.log
+
+# Smoke / preflight / probe scripts and their logs (temporary research artifacts).
+# Anchored to repo root with a leading slash so we don't accidentally exclude
+# package internals like src/hdgpso/__init__.py or src/hdgpso/_version.py.
+/_*.py
+/_*.log
+/_*.png
+/_smoke_*.png
+
+# Compiled notebooks / cached artifacts
+.ipynb_checkpoints/
+
+# Misc CSVs from one-off scripts
+hdgpso_meta_search.csv
+
+# pyswarms / scikit-optimize / etc. write log files
+report.log
+
+# -----------------------------------------------------------------------------
+# Paper directory excluded pending author's doc review.
+# When ready, remove the line below and selectively add LaTeX sources, figures,
+# and the experimental appendix. Build artifacts and bundled third-party PDFs
+# are explicitly excluded below regardless.
+# -----------------------------------------------------------------------------
+paper/
+
+# LaTeX build artifacts (if paper/ is later partially un-ignored)
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.out
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+*.nav
+*.snm
+*.vrb
+
+# Third-party reference PDFs bundled under paper/literature/ (copyright / size)
+paper/literature/
+
+# Compiled paper PDF (regenerable from LaTeX source)
+paper/IEEE_Conference_HDGPSO.pdf
+
+# Local scratch CSVs / logs
+*.tmp
+*.bak

@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use HDGPSO or HDGPSOMF in your research, please cite the following work."
+title: "HDGPSO: Hybrid DE-GWO-PSO hyperparameter optimization with multi-fidelity extension"
+type: software
+authors:
+  - family-names: Kumar
+    given-names: Ashutosh
+    affiliation: NVIDIA
+    email: ashutokumar@nvidia.com
+repository-code: "https://github.com/ashuxen/hdgpso"
+license: MIT
+keywords:
+  - hyperparameter optimization
+  - metaheuristic
+  - differential evolution
+  - grey wolf optimizer
+  - particle swarm optimization
+  - multi-fidelity
+  - hyperband
+  - AutoML
+preferred-citation:
+  type: article
+  title: "Multi-Fidelity Hybrid Metaheuristic Optimization: HDGPSO and HDGPSO-MF for Hyperparameter Tuning"
+  authors:
+    - family-names: Kumar
+      given-names: Ashutosh
+  year: 2026
+  journal: "TBD"

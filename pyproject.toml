@@ -1,0 +1,85 @@
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hdgpso"
+description = "Hybrid DE-GWO-PSO hyperparameter optimization (single-fidelity HDGPSO and multi-fidelity HDGPSOMF)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Ashutosh Kumar", email = "ashutokumar@nvidia.com" },
+]
+keywords = [
+    "hyperparameter-optimization",
+    "metaheuristic",
+    "differential-evolution",
+    "grey-wolf-optimizer",
+    "particle-swarm-optimization",
+    "multi-fidelity",
+    "bohb",
+    "hyperband",
+    "automl",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+dynamic = ["version"]
+dependencies = [
+    "numpy>=1.23",
+    "pandas>=1.5",
+    "scipy>=1.10",
+    "scikit-learn>=1.2",
+]
+
+[project.optional-dependencies]
+stats = [
+    "matplotlib>=3.6",
+]
+benchmarks = [
+    "matplotlib>=3.6",
+    "scikit-optimize>=0.10",
+    "optuna>=3.0",
+    "pyswarms>=1.3",
+    "xgboost>=2.0",
+]
+deep = [
+    "torch>=2.0",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/ashuxen/hdgpso"
+Documentation = "https://github.com/ashuxen/hdgpso#readme"
+Repository = "https://github.com/ashuxen/hdgpso"
+Issues = "https://github.com/ashuxen/hdgpso/issues"
+
+[tool.hatch.version]
+path = "src/hdgpso/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hdgpso"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
