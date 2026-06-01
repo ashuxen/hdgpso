@@ -4,12 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "hdgpso"
-description = "Hybrid DE-GWO-PSO hyperparameter optimization (single-fidelity HDGPSO and multi-fidelity HDGPSOMF)."
+description = "HDGPSO: a hybrid DE-GWO-PSO hyperparameter optimizer with RandomForest surrogate filtering."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 authors = [
-    { name = "Ashutosh Kumar", email = "ashutokumar@nvidia.com" },
+    { name = "Ashutosh Kumar", email = "ashutosh.kumar@und.edu" },
 ]
 keywords = [
     "hyperparameter-optimization",
@@ -17,9 +17,7 @@ keywords = [
     "differential-evolution",
     "grey-wolf-optimizer",
     "particle-swarm-optimization",
-    "multi-fidelity",
-    "bohb",
-    "hyperband",
+    "surrogate-assisted-optimization",
     "automl",
 ]
 classifiers = [

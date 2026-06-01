@@ -1,14 +1,9 @@
 """hdgpso — Hybrid DE-GWO-PSO hyperparameter optimization.
 
-Two algorithms are available:
-
-  * :class:`HDGPSO` — single-fidelity three-stage hybrid (DE + GWO + PSO)
-    with optional RandomForest surrogate. Best for medium evaluation
-    budgets (40-60 evals) and tree-based model HPO.
-
-  * :class:`HDGPSOMF` — multi-fidelity extension with BOHB-style
-    successive halving. Best for low evaluation budgets where each
-    objective evaluation is expensive.
+:class:`HDGPSO` is the published optimizer: a three-stage hybrid
+metaheuristic (Differential Evolution + Grey Wolf Optimizer + Particle
+Swarm Optimization) augmented by a RandomForest surrogate filter using
+tree-variance-based lower-confidence-bound acquisition.
 
 Quick start::
 
@@ -28,12 +23,16 @@ Quick start::
                     iterations=15, seed=0).optimize()
     print(result.best_params, result.best_loss)
 
-For multi-fidelity workflows the objective accepts a ``fidelity``
-argument; see :class:`HDGPSOMF` and the ``hdgpso.multifidelity`` module.
-
 Statistical-analysis helpers for paper-grade benchmarks live in
 :mod:`hdgpso.stats` (Friedman, Nemenyi, CD diagrams, Cliff's delta,
 bootstrap CIs).
+
+.. note::
+
+   :class:`HDGPSOMF` is an *experimental* multi-fidelity variant built
+   on top of HDGPSO with BOHB-style successive halving. It is provided
+   for future-work exploration only and is not part of the published
+   headline results; its API may change before a 1.0 release.
 """
 from .core import (
     Categorical,
