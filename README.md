@@ -3,16 +3,23 @@
 [![Python: 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Hybrid Differential Evolution + Grey Wolf Optimizer + Particle Swarm
-Optimization** — a three-stage metaheuristic for hyperparameter
-optimization, augmented by a RandomForest surrogate filter using
-tree-variance-based lower-confidence-bound acquisition.
+A Python implementation of HDGPSO, a hybrid method for hyperparameter
+optimization. It combines Differential Evolution, Grey Wolf Optimization,
+and Particle Swarm Optimization in one sequential search process, and
+uses a RandomForest surrogate to filter candidates before they are sent
+for expensive model training.
 
-On a 189-cell benchmark (9 compatible *(dataset, model)* pairs × 7
-tuners × 3 seeds at the standard 60-evaluation budget), HDGPSO achieves
-the lowest mean rank (2.63), narrowly beating Optuna-TPE (2.85) and
-Bayesian Optimization (2.89). It wins outright on every
-Gradient-Boosted-tree cell tested.
+The idea behind the method is that no single optimizer is best for every
+problem. DE explores the search space, GWO moves the population toward
+good regions using the current top three candidates, and PSO refines
+solutions with memory of past good positions. Running all three in
+sequence each iteration gives the search a different behavior than any
+of them alone.
+
+On the benchmark used in the paper (9 valid *(dataset, model)* pairs,
+7 tuners, 3 seeds, 60-evaluation budget), HDGPSO reaches a mean rank
+of 2.63, ahead of Optuna-TPE at 2.85 and Bayesian Optimization at 2.89,
+and wins outright on every Gradient-Boosted-tree cell.
 
 ## Install
 
@@ -25,18 +32,18 @@ From source:
 ```bash
 git clone https://github.com/ashuxen/hdgpso.git
 cd hdgpso
-pip install -e ".[stats]"                # 'stats' extra for Demsar plots
+pip install -e ".[stats]"                # adds matplotlib for plotting
 pip install -e ".[benchmarks,deep,dev]"  # full reproduction stack
 ```
 
 Optional extras:
 
-| Extra | Adds | When you need it |
-|-------|------|------------------|
-| `[stats]` | matplotlib | for `hdgpso.stats.cd_diagram` and `hdgpso.plots.*` |
-| `[benchmarks]` | scikit-optimize, optuna, pyswarms, xgboost | to run the paper benchmark with all 7 baseline tuners |
-| `[deep]` | torch | to run the MLP and PINN-Heat objectives |
-| `[dev]` | pytest, ruff | for development / running tests |
+| Extra | Adds | When to use it |
+|-------|------|----------------|
+| `[stats]` | matplotlib | `hdgpso.stats.cd_diagram` and `hdgpso.plots.*` |
+| `[benchmarks]` | scikit-optimize, optuna, pyswarms, xgboost | the full 7-tuner reproduction benchmark |
+| `[deep]` | torch | MLP and PINN-Heat objectives |
+| `[dev]` | pytest, ruff | running tests during development |
 
 ## Quickstart
 
@@ -64,30 +71,41 @@ print(f"Best loss: {result.best_loss:.4f}")
 print(result.history.head())
 ```
 
-A user of HDGPSO sets only the search space, the objective, and the
-budget pair `(population_size, iterations)`. All other knobs ship with
-published defaults (`F=0.8, CR=0.5` per Storn–Price; `c1=c2=2.0` per
-Kennedy–Eberhart; inertia `w: 0.7→0.4`; RandomForest surrogate refits
-every 4 iterations once history reaches ~2× the population) and are
-exposed via the constructor — see `help(HDGPSO)` for the full reference.
+In normal use you only need to provide the search space, the objective
+function, and the population/iteration budget. The remaining algorithm
+settings come from the published literature:
+
+- DE: `F = 0.8`, `CR = 0.5` (within the Storn–Price recommended range)
+- PSO: `c1 = c2 = 2.0` (classical Kennedy–Eberhart setting)
+- Inertia: `w` decays linearly from `0.7` to `0.4` (tighter than the
+  textbook `0.9 → 0.4` because DE and GWO already cover the exploration
+  side)
+- RandomForest surrogate: refits every 4 iterations once the trial
+  history has at least 12 points (about twice the population size)
+
+All of these can be overridden through the constructor. See
+`help(HDGPSO)` for the full list.
 
 ## Algorithm
 
-A population of candidates undergoes three operator stages per
-iteration:
+Each iteration of HDGPSO runs three stages on the same population:
 
-1. **Differential Evolution** — DE/rand/1 mutation with binary crossover
-   and greedy selection generates trial candidates;
-2. **Grey Wolf leadership** — the top-three of the population (α, β, δ)
-   guide every member's position via the canonical Mirjalili (2014)
-   update;
-3. **Particle Swarm refinement** — each particle's personal-best and the
-   swarm's global-best drive a momentum update with linearly decreasing
-   inertia.
+1. **Differential Evolution** — for every candidate, pick three other
+   members at random, form a donor vector via the DE/rand/1 mutation,
+   apply binary crossover, and accept the trial only if it improves the
+   loss.
+2. **Grey Wolf leadership** — sort the population by current loss and
+   label the top three as α, β, δ. Every other member is updated toward
+   a weighted blend of these three leaders, using the canonical
+   Mirjalili (2014) formula.
+3. **Particle Swarm refinement** — each particle updates its velocity
+   from its personal best and the swarm's global best with a linearly
+   decreasing inertia weight, then moves.
 
-A RandomForest surrogate is fit periodically on the trial history and
-used to filter candidate proposals between stages, adding principled
-exploitation while DE / GWO / PSO supply complementary exploration.
+Between stages, a RandomForest surrogate trained on past trials is
+used to score proposed candidates and prefer ones with the best
+tree-variance lower confidence bound. The surrogate is only an
+inexpensive filter, never a substitute for the real objective.
 
 ## Repository layout
 
@@ -100,9 +118,9 @@ hdgpso/
 │   └── plots.py                # convergence / rank-bar / wins
 ├── benchmarks/                 # research reproduction scripts
 │   ├── benchmark.py            # main run_benchmark() driver
-│   ├── tuners.py               # uniform adapters for baseline tuners
+│   ├── tuners.py               # uniform adapters for the baseline tuners
 │   ├── deep_objectives.py      # MLP + PINN-Heat objectives (torch)
-│   ├── run_claim_check_v*.py   # per-iteration claim-check runs
+│   ├── run_claim_check_v*.py   # main paper run at b=60
 │   └── run_budget_sweep.py     # 4-budget sweep
 ├── tests/test_hdgpso.py        # unit tests
 └── examples/                   # standalone usage examples
@@ -117,16 +135,16 @@ cd benchmarks
 # Main 7-tuner comparison at budget=60
 python run_claim_check_v5.py
 
-# Budget sensitivity sweep at budgets {20, 40, 60, 100}
+# Budget sensitivity sweep over {20, 40, 60, 100}
 python run_budget_sweep.py
 ```
 
-Outputs land in `results_*/` directories (gitignored).
+Results are written into `results_*/` (gitignored).
 
 ## Statistical analysis (Demšar 2006)
 
-`hdgpso.stats` implements the standard methodology for comparing K
-algorithms over N cells:
+The `hdgpso.stats` module implements the standard rank-based protocol
+for comparing several tuners across several cells:
 
 ```python
 import pandas as pd
@@ -136,7 +154,7 @@ from hdgpso.stats import (
 )
 
 summary = pd.read_csv("results/summary.csv")
-print(friedman_test(summary))           # omnibus rejection
+print(friedman_test(summary))           # global rejection check
 print(bootstrap_rank_ci(summary))       # 95% CI per tuner
 print(hdgpso_vs_baselines_table(summary, target="HDGPSO"))
 cd_diagram(summary, save_path="fig_cd.png", title="My benchmark")
@@ -149,22 +167,20 @@ pip install -e ".[dev]"
 pytest -v
 ```
 
-## Experimental: HDGPSOMF (multi-fidelity, future work)
+## Experimental: HDGPSOMF
 
-The package also ships an in-development multi-fidelity variant,
-`HDGPSOMF`, that wraps HDGPSO with BOHB-style successive halving over
-fidelity-units. It is **not part of the published headline results** —
-on the benchmark mix we evaluated it did not show a consistent
-advantage over single-fidelity HDGPSO, because the sklearn models we
-tested are already cheap at full fidelity and the low-fidelity proxies
-introduced enough noise to flip candidate ranks. We expect it to be
-more impactful on benchmarks where fidelity (e.g., epoch count) is
-exact and informative and each full-fidelity evaluation is genuinely
-expensive (large neural architecture search benchmarks, etc.).
+The package also ships an experimental multi-fidelity variant called
+`HDGPSOMF` that wraps HDGPSO with BOHB-style successive halving over
+fidelity units. It is not part of the published headline results: on
+the benchmark mix we tested it did not show a consistent advantage,
+mainly because the sklearn models are already inexpensive at full
+fidelity and the low-fidelity proxies introduced enough noise to flip
+candidate rankings. It is more likely to be useful in settings where
+fidelity (for example, epoch count) is exact and informative and where
+each full-fidelity evaluation is genuinely expensive.
 
-If you want to experiment with it, see `examples/02_multifidelity.py`
-and `help(hdgpso.HDGPSOMF)`. API stability is not guaranteed and the
-implementation may change before a 1.0 release.
+If you want to try it, see `examples/02_multifidelity.py` and
+`help(hdgpso.HDGPSOMF)`. The API is not yet stable.
 
 ## References
 
@@ -175,7 +191,7 @@ implementation may change before a 1.0 release.
 
 ## Citation
 
-See [CITATION.cff](CITATION.cff). When citing, use:
+See [CITATION.cff](CITATION.cff). The current BibTeX entry is:
 
 ```bibtex
 @software{kumar2026hdgpso,

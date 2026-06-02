@@ -1,17 +1,18 @@
 """HDGPSO: Hybrid DE-GWO-PSO hyperparameter optimizer.
 
-A population-based hyperparameter tuner that runs three complementary
-search operators per iteration, each contributing a distinct behavior:
+A population-based hyperparameter tuner that runs three search
+operators per iteration. Each operator has a different behavior, and
+together they cover the explore/exploit spectrum:
 
   Stage 1 (Differential Evolution) — exploration via vector recombination.
     For each member i, generate a DE/rand/1 mutant trial, apply binary
     crossover with rate CR, and accept the trial greedily if it improves
     the loss. F controls mutation strength.
 
-  Stage 2 (Grey Wolf leadership) — exploitation around top of the
-    population. Identify the three best individuals as alpha, beta, delta
-    and update every member with the standard GWO position update
-    (Mirjalili 2014):
+  Stage 2 (Grey Wolf leadership) — exploitation around the top of the
+    population. The three best individuals are identified as alpha, beta,
+    delta, and every member is updated with the standard GWO position
+    update from Mirjalili (2014):
 
         a       linearly decreases from 2 -> 0 across iterations
         A_k     = 2*a*r1 - a    (per dim, per leader k in {alpha, beta, delta})
@@ -28,9 +29,9 @@ search operators per iteration, each contributing a distinct behavior:
         v_i = w * v_i + c1 * r1 * (pbest_i - x_i) + c2 * r2 * (gbest - x_i)
         x_i = x_i + v_i
 
-DE explores aggressively, GWO drives toward the top-three concentration,
-PSO injects persistent individual + collective memory and momentum-based
-fine-tuning. Each iteration costs ~3 * population_size objective calls.
+DE handles exploration, GWO pulls candidates toward the current top
+three, and PSO adds memory and momentum for fine-tuning. Each iteration
+costs roughly 3 * population_size objective calls.
 
 Optuna-style API:
 
