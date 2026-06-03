@@ -1,4 +1,4 @@
-"""Paper-ready figures from benchmark CSVs."""
+"""Plot helpers that produce paper-ready figures from benchmark CSVs."""
 from __future__ import annotations
 
 from typing import Optional
@@ -41,7 +41,7 @@ def convergence_plot(
     ax: Optional[plt.Axes] = None,
     title: Optional[str] = None,
 ) -> plt.Axes:
-    """Mean running-best loss vs iteration, averaged over seeds, per tuner."""
+    """Plot mean running-best loss against iteration, averaged over seeds, per tuner."""
     df = history_df.query("dataset == @dataset and model == @model").copy()
     if df.empty:
         raise ValueError(f"No history for {dataset}/{model}")
@@ -83,7 +83,7 @@ def convergence_grid(
     history_df: pd.DataFrame,
     save_path: Optional[str] = None,
 ):
-    """One subplot per (dataset, model) — useful for paper figure 1."""
+    """Render one convergence subplot per (dataset, model) cell."""
     cells = (
         history_df[["dataset", "model"]]
         .drop_duplicates()
@@ -134,7 +134,7 @@ def mean_rank_bar(
     summary_df: pd.DataFrame,
     save_path: Optional[str] = None,
 ) -> plt.Figure:
-    """Mean rank (lower better) across all (dataset, model, seed) cells."""
+    """Plot mean rank per tuner across all (dataset, model, seed) cells. Lower is better."""
     df = summary_df.copy()
     df["rank"] = df.groupby(["dataset", "model", "seed"])["best_loss"].rank(method="min")
     agg = (
@@ -157,7 +157,7 @@ def mean_rank_bar(
 
 
 def wins_table(summary_df: pd.DataFrame) -> pd.DataFrame:
-    """Count per-tuner wins across (dataset, model, seed) cells."""
+    """Return a table of per-tuner wins across the (dataset, model, seed) cells."""
     df = summary_df.copy()
     df["rank"] = df.groupby(["dataset", "model", "seed"])["best_loss"].rank(method="min")
     wins = df[df["rank"] == 1.0].groupby("tuner").size().reset_index(name="wins")

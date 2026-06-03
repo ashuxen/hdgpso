@@ -1,11 +1,14 @@
-"""Deep-net + PINN objectives for the HDGPSO benchmark.
+"""Deep-network and PINN objectives used in the HDGPSO benchmark.
 
-Each factory returns an `objective(params) -> float` that the tuner calls.
-Both objectives target ~2-5s per evaluation on GPU.
+Each factory in this module returns an ``objective(params) -> float``
+callable that the tuner can invoke directly. Both objectives are
+designed to take about 2 to 5 seconds per evaluation on a GPU.
 
-Search spaces are intentionally **high-dim + mixed-type** (10+ params with
-floats, ints, categoricals): the regime where surrogate-based methods
-(Bayes / TPE) struggle and metaheuristics (HDGPSO) tend to win.
+The search spaces here are intentionally high-dimensional and
+mixed-type, with more than 10 parameters spanning floats, integers,
+and categoricals. This is the regime in which surrogate-based methods
+such as Bayesian Optimization and TPE tend to struggle, and in which
+metaheuristics such as HDGPSO are expected to be competitive.
 """
 from __future__ import annotations
 

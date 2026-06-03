@@ -1,11 +1,17 @@
-"""Claim-check v4: HDGPSO with UCB acquisition + lower surrogate threshold + restart.
+"""Claim-check v4. HDGPSO with UCB acquisition, lower surrogate threshold, and restart.
 
-Identical task config to v3 (189 cells); only the algorithm changes:
-  - Surrogate now uses tree-variance UCB (LCB for minimization), kappa=1.5
-  - surrogate_min_history lowered 12 -> 6 (activates earlier)
-  - Stagnation-triggered restart: randomize worst 50% after 2 stagnant iters
+The task configuration is identical to v3 (189 cells); only the
+algorithm side of HDGPSO is changed:
 
-Writes to results_claim_check_v4/.
+  - The surrogate filter now uses tree-variance UCB (LCB for
+    minimization) with kappa = 1.5 instead of pure exploit.
+  - The surrogate minimum history is lowered from 12 points to 6,
+    which activates the surrogate filter earlier in the run.
+  - A stagnation-triggered restart is added. After 2 iterations
+    without an improvement in best loss, the worst 50% of the
+    population is randomized.
+
+Results are written to ``results_claim_check_v4/``.
 """
 from __future__ import annotations
 

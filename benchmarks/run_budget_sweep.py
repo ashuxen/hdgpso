@@ -1,7 +1,8 @@
-"""Run the budget-sensitivity sweep for Claim 6.
+"""Budget-sensitivity sweep used to evaluate Claim 6.
 
-Re-runs the benchmark at multiple budgets and verifies HDGPSO's mean rank
-stays in the top tier (rank <= 2.5) across all budgets.
+The script re-runs the benchmark at several evaluation budgets and
+checks whether HDGPSO's mean rank remains in the top tier (mean rank
+no greater than 2.5) at every budget.
 """
 from __future__ import annotations
 

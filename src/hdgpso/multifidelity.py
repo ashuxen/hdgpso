@@ -1,29 +1,34 @@
-"""HDGPSOMF: multi-fidelity extension of HDGPSO.
+"""HDGPSOMF: a multi-fidelity extension of HDGPSO.
 
-Extends :class:`hdgpso.HDGPSO` with BOHB-style successive halving
-(Hyperband, Li et al. 2017 / BOHB, Falkner 2018):
+The class :class:`HDGPSOMF` extends :class:`hdgpso.HDGPSO` with
+BOHB-style successive halving, following the approach used in
+Hyperband (Li et al. 2017) and BOHB (Falkner et al. 2018):
 
-  - Each candidate is first evaluated at LOW fidelity (cheap, noisy
-    proxy: e.g. cv=1, reduced epochs, fewer collocation points).
-  - The top ``verify_fraction`` of candidates per stage are re-evaluated
-    at FULL fidelity (1.0) to confirm.
-  - Budget is accounted in *fidelity-units*: a low-fidelity eval at
-    ``fidelity=0.3`` consumes 0.3 budget units; a full eval costs 1.0.
-  - The surrogate is trained on FULL-fidelity points only (cleaner
-    training signal, avoids low-fidelity miscalibration).
+  - Each candidate is first evaluated at a low fidelity, which acts
+    as a cheap and slightly noisy proxy. Examples are using a single
+    cross-validation fold, training for fewer epochs, or using fewer
+    collocation points.
+  - The top ``verify_fraction`` of candidates per stage are then
+    re-evaluated at full fidelity to confirm the ranking.
+  - The budget is accounted in fidelity-units. A low-fidelity probe
+    at ``fidelity = 0.3`` consumes 0.3 budget units, and a full
+    evaluation consumes 1.0 unit.
+  - The surrogate is trained only on full-fidelity points. This gives
+    a cleaner training signal and avoids miscalibration from noisy
+    low-fidelity evaluations.
 
-To use HDGPSOMF, supply an objective callable that accepts a
-``fidelity`` keyword argument in [0, 1]. Example multi-fidelity
-objective factories are provided in
-``benchmarks/multifidelity_objectives.py`` (sklearn / MLP / PINN
-flavors); users are encouraged to write their own for new problems.
+To use HDGPSOMF, the user supplies an objective callable that accepts
+a ``fidelity`` keyword argument in [0, 1]. Reference factories for
+sklearn, MLP, and PINN tasks are provided in
+``benchmarks/multifidelity_objectives.py``. Users are encouraged to
+write their own factories for new problems.
 
 Example::
 
     from hdgpso import HDGPSOMF, SearchSpace, Float, Int
 
     def objective(params, fidelity=1.0):
-        # Cheap proxy: train with fewer epochs at lower fidelity
+        # Train with fewer epochs when fidelity is below 1.0
         n_epochs = max(5, int(50 * fidelity))
         return train_model(params, epochs=n_epochs)
 
@@ -49,24 +54,26 @@ class HDGPSOMF(HDGPSO):
     ----------
     space, objective : see :class:`HDGPSO`.
     eval_budget : int, optional
-        Total fidelity-units permitted. One full-fidelity evaluation
-        costs 1.0 unit; a 0.3-fidelity probe costs 0.3 units.
+        Total number of fidelity-units permitted. One full-fidelity
+        evaluation consumes 1.0 unit, and a 0.3-fidelity probe consumes
+        0.3 units.
     low_fidelity : float
-        Fidelity used for proposal probes (default 0.3).
+        Fidelity used for the cheap proposal probes. Default is 0.3.
     verify_fraction : float
-        Fraction of proposals per stage re-evaluated at full fidelity
-        (default 0.4).
+        Fraction of proposals per stage that are re-evaluated at full
+        fidelity for confirmation. Default is 0.4.
     use_surrogate, surrogate_pool, surrogate_refit_every,
     surrogate_min_history, surrogate_kappa : see :class:`HDGPSO`.
     restart_patience : Optional[int]
-        Disabled by default for HDGPSOMF (restart destroys converged
-        candidates that the multi-fidelity surrogate has invested in).
+        Disabled by default for HDGPSOMF, because a restart would
+        discard converged candidates that the multi-fidelity surrogate
+        has already invested compute in.
 
     Notes
     -----
-    The surrogate is trained only on FULL-fidelity points to avoid
-    noisy low-fidelity miscalibration. This mirrors the discipline
-    used by BOHB (Falkner 2018).
+    The surrogate is trained only on full-fidelity points. This avoids
+    miscalibration from noisy low-fidelity evaluations and matches the
+    discipline used in BOHB (Falkner et al. 2018).
     """
 
     name = "HDGPSO-MF"
@@ -155,7 +162,7 @@ class HDGPSOMF(HDGPSO):
         return full_losses
 
     def _refit_surrogate(self, iteration: int) -> None:
-        """Refit surrogate using only FULL-fidelity history points."""
+        """Refit the surrogate using only full-fidelity history points."""
         if not self.use_surrogate:
             return
         full_hist = [h for h in self._history if h.get("fidelity", 1.0) >= 0.99

@@ -1,12 +1,16 @@
-"""Claim-check v5: full 8-tuner benchmark including HDGPSO and HDGPSO-MF.
+"""Claim-check v5. The main paper benchmark with all tuners.
 
-Adds HDGPSO-MF to the v3 task config:
-  - 4 datasets x 4 models = 9 valid (ds, model) pairs
-  - 8 tuners (6 baselines + HDGPSO + HDGPSO-MF)
-  - 3 seeds
-  - 216 cells at budget=60
+This script extends the v3 configuration by adding HDGPSO-MF, so the
+task grid now contains:
 
-Run from the repo root, with the package installed:
+  - 4 datasets paired with 4 model classes, which yields 9 valid
+    (dataset, model) combinations.
+  - 8 tuners (6 baselines plus HDGPSO and HDGPSO-MF).
+  - 3 random seeds per combination.
+  - 216 cells in total at the standard 60-evaluation budget.
+
+To reproduce the benchmark, install the package first and then run::
+
     cd benchmarks
     python run_claim_check_v5.py
 """

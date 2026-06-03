@@ -1,11 +1,16 @@
-"""Generate paper-ready figures as PDF (vector) for the IEEE conference paper.
+"""Generate paper-ready PDF (vector) figures for the IEEE conference paper.
 
-Outputs to paper/figures/:
-  - fig3_bar_ranks.pdf       Horizontal bar chart with bootstrap CI error bars (Fig. 3)
-  - fig4_rank_vs_budget.pdf  Line plot of rank vs evaluation budget (Fig. 4)
-  - fig5_heatmap_per_task.pdf Per-task rank heatmap (Fig. 5)
+The script writes the following files into ``paper/figures/``:
 
-Reads:
+  - fig3_bar_ranks.pdf
+      Horizontal bar chart with bootstrap confidence-interval error
+      bars (Fig. 3 in the paper).
+  - fig4_rank_vs_budget.pdf
+      Line plot of mean rank versus evaluation budget (Fig. 4).
+  - fig5_heatmap_per_task.pdf
+      Per-task rank heatmap (Fig. 5).
+
+Input CSVs:
   ../results_claim_check_v5/summary.csv
   ../results_budget_sweep/summary_budget_sweep.csv
 """

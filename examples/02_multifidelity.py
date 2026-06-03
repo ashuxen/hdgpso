@@ -1,10 +1,11 @@
-"""HDGPSO-MF example: multi-fidelity HPO on a synthetic noisy objective.
+"""HDGPSO-MF example. Multi-fidelity HPO on a synthetic noisy objective.
 
-Demonstrates how to write a fidelity-aware objective and how
-HDGPSO-MF uses low-fidelity probes to filter candidates before
-spending the full evaluation budget.
+This example shows how to write a fidelity-aware objective function
+and how HDGPSO-MF uses cheap low-fidelity probes to filter candidates
+before spending the full evaluation budget on the best ones.
 
-Run:
+Run with::
+
     pip install hdgpso
     python 02_multifidelity.py
 """

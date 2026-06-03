@@ -1,4 +1,4 @@
-"""Smoke tests for hdgpso + tuners.
+"""Smoke tests for the hdgpso package and its baseline tuner adapters.
 
 Run with:  python -m pytest test_hdgpso.py -v
 """

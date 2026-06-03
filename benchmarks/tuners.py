@@ -1,16 +1,18 @@
-"""Uniform `.optimize()` adapters around third-party hyperparameter tuners.
+"""Uniform ``.optimize()`` adapters around third-party hyperparameter tuners.
 
-Every tuner here exposes:
+Every tuner exposed by this module follows the same interface:
 
     tuner = SomeTuner(space, objective, budget=N, seed=42)
-    result = tuner.optimize()   # -> hdgpso.OptimizeResult
+    result = tuner.optimize()   # returns an hdgpso.OptimizeResult
 
-`budget` is the *function-evaluation budget* (number of times `objective`
-is called), so all methods can be compared fairly on equal wall-clock-
-independent budget.
+The ``budget`` argument is the function-evaluation budget, that is,
+the number of times the objective is called. Using a common budget
+across tuners allows a fair comparison that does not depend on
+wall-clock differences between the underlying implementations.
 
-Optional dependencies are imported lazily inside each tuner so the rest
-of the benchmark still works if a package is missing.
+Optional dependencies are imported lazily inside each adapter. This
+means that the rest of the benchmark continues to work even when one
+of the third-party packages is not installed.
 """
 from __future__ import annotations
 

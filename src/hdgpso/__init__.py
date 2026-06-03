@@ -1,10 +1,11 @@
-"""hdgpso — Hybrid DE-GWO-PSO hyperparameter optimization.
+"""hdgpso package. Hybrid DE-GWO-PSO hyperparameter optimization.
 
-:class:`HDGPSO` is the optimizer described in the paper. It runs three
-operator stages each iteration — Differential Evolution, Grey Wolf
-Optimizer, and Particle Swarm Optimization — and uses a RandomForest
-surrogate to filter candidates between stages via a tree-variance
-lower-confidence-bound score.
+The :class:`HDGPSO` class is the optimizer described in the paper. It
+runs three operator stages on the same population in every iteration:
+Differential Evolution, Grey Wolf Optimization, and Particle Swarm
+Optimization. A RandomForest surrogate is fit on the trial history
+and is used to filter proposed candidates between the stages, using a
+tree-variance lower-confidence-bound score.
 
 Quick start::
 
@@ -17,23 +18,23 @@ Quick start::
     })
 
     def objective(params):
-        # ... train model with given hyperparameters
+        # train a model with the given hyperparameters
         return -val_accuracy   # lower is better
 
     result = HDGPSO(space, objective, population_size=10,
                     iterations=15, seed=0).optimize()
     print(result.best_params, result.best_loss)
 
-The rank-based statistical helpers used in the paper benchmarks
-(Friedman, Nemenyi, CD diagrams, Cliff's delta, bootstrap CIs) live in
-:mod:`hdgpso.stats`.
+The rank-based statistical helpers used for the paper benchmark
+(Friedman, Nemenyi, CD diagrams, Cliff's delta, bootstrap confidence
+intervals) are available in :mod:`hdgpso.stats`.
 
 .. note::
 
    :class:`HDGPSOMF` is an experimental multi-fidelity variant built on
-   top of HDGPSO with BOHB-style successive halving. It is provided for
-   future-work exploration and is not part of the published results.
-   Its API is not yet stable.
+   top of HDGPSO with BOHB-style successive halving. It is included for
+   future-work exploration only. It is not part of the published
+   results, and its API is not yet stable.
 """
 from .core import (
     Categorical,

@@ -1,17 +1,21 @@
 """Compile the final paper-claim report and figures from all runs.
 
-Reads:
-  ../results_claim_check_v5/summary.csv  (main 8-tuner run at budget=60)
-  ../results_budget_sweep/summary_budget_sweep.csv  (8 tuners x 4 budgets sweep)
+The script reads the following inputs:
 
-Outputs into ../results_final/:
-  - final_report.txt           consolidated 6-claim status
-  - fig_rank_vs_budget.png     rank-vs-budget curves (8 tuners)
-  - fig_cd_by_budget.png       2x2 grid of CD diagrams
-  - fig_cd_b60_headline.png    headline CD diagram at budget=60
-  - rank_by_budget.csv         claim 6 headline
-  - rank_by_budget_detailed.csv all 8 tuners x 4 budgets
-  - paper_summary_table.csv    pivot for LaTeX/Word
+  ../results_claim_check_v5/summary.csv
+      Main 8-tuner run at budget = 60.
+  ../results_budget_sweep/summary_budget_sweep.csv
+      Budget sweep over 8 tuners and 4 budgets.
+
+It writes the following outputs into ``../results_final/``:
+
+  - final_report.txt           Consolidated status for the six claims.
+  - fig_rank_vs_budget.png     Rank-vs-budget curves for the 8 tuners.
+  - fig_cd_by_budget.png       2x2 grid of CD diagrams.
+  - fig_cd_b60_headline.png    Headline CD diagram at budget = 60.
+  - rank_by_budget.csv         Claim 6 headline table.
+  - rank_by_budget_detailed.csv All 8 tuners across 4 budgets.
+  - paper_summary_table.csv    Pivot table for use in LaTeX or Word.
 """
 from __future__ import annotations
 

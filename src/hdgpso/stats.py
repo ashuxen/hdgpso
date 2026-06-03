@@ -1,16 +1,19 @@
-"""Publication-grade statistical analysis for multi-tuner benchmarks.
+"""Statistical helpers for multi-tuner benchmarks.
 
-Implements the Demsar (2006) methodology for comparing N classifiers
-across K datasets:
+This module implements the Demsar (2006) protocol for comparing several
+algorithms across several datasets. The main steps are:
 
-  1. Friedman omnibus test (reject "all equivalent")
-  2. Nemenyi post-hoc pairwise comparisons
-  3. Critical Difference (CD) diagram
+  1. The Friedman omnibus test, used to reject the null hypothesis that
+     all tuners are equivalent in expected rank.
+  2. The Nemenyi post-hoc test, used to identify which pairs of tuners
+     differ at a given significance level.
+  3. The Critical Difference (CD) diagram, used as a visual summary.
 
-Plus:
-  - Bootstrap 95% CI on per-tuner mean rank
-  - Cliff's delta effect size for HDGPSO vs each baseline
-  - Median percentage improvement
+Additional helpers are also provided:
+
+  - Bootstrap 95% confidence intervals on per-tuner mean rank.
+  - Cliff's delta effect size for HDGPSO against each baseline.
+  - Median percentage improvement.
 
 Reference:
   Demsar, J. (2006). Statistical Comparisons of Classifiers over
@@ -47,8 +50,11 @@ _Q_ALPHA_10 = {
 
 
 def critical_difference(k: int, n_datasets: int, alpha: float = 0.05) -> float:
-    """Nemenyi critical difference: ranks differing by less than CD are NOT
-    significantly different at the given alpha."""
+    """Return the Nemenyi critical difference for K tuners over N datasets.
+
+    Two tuners whose mean ranks differ by less than the returned value
+    are not significantly different at the given alpha.
+    """
     table = _Q_ALPHA_05 if alpha == 0.05 else _Q_ALPHA_10
     if k not in table:
         raise ValueError(f"No Nemenyi q value for k={k}, alpha={alpha}")
@@ -62,10 +68,11 @@ def critical_difference(k: int, n_datasets: int, alpha: float = 0.05) -> float:
 
 
 def build_rank_matrix(summary_df: pd.DataFrame) -> pd.DataFrame:
-    """One row per (dataset, model, seed); columns are tuners; cells are ranks.
+    """Build a per-cell rank matrix from the summary DataFrame.
 
-    Lower rank = better (rank 1 is the best tuner on that cell).
-    Ties get average ranks.
+    The resulting matrix has one row per (dataset, model, seed) cell,
+    one column per tuner, and rank values in the cells. Rank 1 is the
+    best tuner on that cell, and tied values share the average rank.
     """
     pivot = summary_df.pivot_table(
         index=["dataset", "model", "seed"],
@@ -99,10 +106,12 @@ class FriedmanResult:
 
 
 def friedman_test(summary_df: pd.DataFrame, alpha: float = 0.05) -> FriedmanResult:
-    """Friedman omnibus test that all tuners perform equivalently.
+    """Run the Friedman omnibus test on the per-cell rank matrix.
 
-    H0: all tuners have the same expected rank.
-    Rejection (p < alpha) is required before reporting Nemenyi.
+    The null hypothesis is that all tuners share the same expected
+    rank across the cells. The result must be rejected at the chosen
+    alpha level before any pairwise claim from the Nemenyi post-hoc
+    can be reported.
     """
     ranks = build_rank_matrix(summary_df)
     columns = [ranks[c].values for c in ranks.columns]
@@ -122,8 +131,13 @@ def friedman_test(summary_df: pd.DataFrame, alpha: float = 0.05) -> FriedmanResu
 
 
 def nemenyi_matrix(summary_df: pd.DataFrame, alpha: float = 0.05) -> pd.DataFrame:
-    """Pairwise Nemenyi: cell [i, j] = 1 iff tuner i is significantly better
-    than j (lower mean rank by more than CD). Cell = 0 if not distinguishable."""
+    """Compute the pairwise Nemenyi significance matrix.
+
+    The returned DataFrame has cell [i, j] equal to 1 when tuner i is
+    significantly better than tuner j (lower mean rank by more than
+    the critical difference), -1 in the symmetric case, and 0 when the
+    two tuners cannot be distinguished at the given alpha.
+    """
     ranks = build_rank_matrix(summary_df)
     mean_ranks = ranks.mean(axis=0).sort_values()
     tuners = list(mean_ranks.index)
@@ -144,11 +158,13 @@ def nemenyi_matrix(summary_df: pd.DataFrame, alpha: float = 0.05) -> pd.DataFram
 def hdgpso_vs_baselines_table(
     summary_df: pd.DataFrame, target: str = "HDGPSO", alpha: float = 0.05
 ) -> pd.DataFrame:
-    """One row per baseline. For each baseline reports:
-       - mean rank delta (baseline - HDGPSO)
-       - Wilcoxon signed-rank p-value
-       - Cliff's delta effect size
-       - 'Beats per CD?' (Nemenyi significant)
+    """Build a comparison table of the target tuner against each baseline.
+
+    The table contains one row per baseline tuner. The reported
+    quantities for each baseline are the mean-rank delta (baseline -
+    target), the Wilcoxon signed-rank p-value on the paired losses,
+    the Cliff's delta effect size, and a flag indicating whether the
+    pair is Nemenyi-significant at the given alpha.
     """
     ranks = build_rank_matrix(summary_df)
     if target not in ranks.columns:
@@ -207,11 +223,13 @@ def cd_diagram(
     save_path: Optional[str] = None,
     title: Optional[str] = None,
 ) -> plt.Figure:
-    """Render a Critical Difference diagram.
+    """Render a Critical Difference diagram in the Demsar (2006) style.
 
-    Tuners are placed on a horizontal axis at their mean rank (best = left).
-    Horizontal bars connect cliques of tuners that are NOT significantly
-    different at the given alpha (rank difference < CD).
+    The tuners are placed on a horizontal axis at their mean rank, with
+    the best tuner on the left. Horizontal bars connect cliques of
+    tuners that are not significantly different at the given alpha,
+    meaning that their mean ranks differ by less than the critical
+    difference.
     """
     ranks = build_rank_matrix(summary_df)
     mean_ranks = ranks.mean(axis=0).sort_values()
@@ -323,12 +341,14 @@ def cd_diagram(
 
 
 def cliffs_delta(x: np.ndarray, y: np.ndarray) -> float:
-    """Cliff's delta nonparametric effect size in [-1, 1].
+    """Compute Cliff's delta, a non-parametric effect size in [-1, 1].
 
-    delta(x, y) = P(x < y) - P(x > y). For loss values where lower is
-    better, a positive delta means x (target) tends to have lower losses
-    than y (baseline). Common thresholds: |d|<0.147 negligible,
-    <0.33 small, <0.474 medium, else large.
+    The value is defined as delta(x, y) = P(x < y) - P(x > y). When
+    the inputs are loss values for which lower is better, a positive
+    delta means that x (the target) tends to produce lower losses
+    than y (the baseline). The standard interpretation thresholds are
+    |delta| < 0.147 (negligible), < 0.330 (small), < 0.474 (medium),
+    and larger values are considered a large effect.
     """
     x = np.asarray(x)
     y = np.asarray(y)
@@ -351,10 +371,12 @@ def bootstrap_rank_ci(
     alpha: float = 0.05,
     seed: int = 0,
 ) -> pd.DataFrame:
-    """Bootstrap 95% CI on per-tuner mean rank.
+    """Compute a bootstrap 95% confidence interval for each tuner's mean rank.
 
-    Resamples (dataset, model, seed) cells with replacement n_boot times,
-    recomputes mean rank per tuner, and returns mean / lo / hi columns.
+    The (dataset, model, seed) cells are resampled with replacement
+    n_boot times. For each resample, the mean rank of every tuner is
+    recomputed. The returned DataFrame contains the original mean
+    rank and the lower and upper bootstrap bounds.
     """
     ranks = build_rank_matrix(summary_df)
     rng = np.random.default_rng(seed)

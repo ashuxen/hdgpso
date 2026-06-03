@@ -1,18 +1,18 @@
 """HDGPSO: Hybrid DE-GWO-PSO hyperparameter optimizer.
 
-A population-based hyperparameter tuner that runs three search
-operators per iteration. Each operator has a different behavior, and
-together they cover the explore/exploit spectrum:
+This module implements a population-based hyperparameter tuner that
+runs three search operators on the same population in every iteration.
+Each operator has a different behavior, and together they cover the
+explore/exploit spectrum:
 
-  Stage 1 (Differential Evolution) — exploration via vector recombination.
-    For each member i, generate a DE/rand/1 mutant trial, apply binary
-    crossover with rate CR, and accept the trial greedily if it improves
-    the loss. F controls mutation strength.
+  Stage 1 (Differential Evolution). For each member i in the population,
+    a DE/rand/1 mutant is formed, binary crossover is applied with rate
+    CR, and the resulting trial replaces the current member only if it
+    improves the loss. The parameter F controls the mutation strength.
 
-  Stage 2 (Grey Wolf leadership) — exploitation around the top of the
-    population. The three best individuals are identified as alpha, beta,
-    delta, and every member is updated with the standard GWO position
-    update from Mirjalili (2014):
+  Stage 2 (Grey Wolf Optimizer). The three best members are labeled
+    alpha, beta, and delta. Every other member is updated using the
+    standard GWO position update from Mirjalili (2014):
 
         a       linearly decreases from 2 -> 0 across iterations
         A_k     = 2*a*r1 - a    (per dim, per leader k in {alpha, beta, delta})
@@ -21,17 +21,17 @@ together they cover the explore/exploit spectrum:
         X_k'    = X_k - A_k * D_k
         X_new   = (X_alpha' + X_beta' + X_delta') / 3
 
-  Stage 3 (Particle Swarm) — momentum-based refinement using individual
-    and swarm memory. Each particle remembers its own best position
-    (pbest) and the swarm tracks the all-time global best (gbest):
+  Stage 3 (Particle Swarm Optimization). Each particle stores its own
+    best position (pbest) and the swarm stores the all-time global best
+    (gbest). The velocity and position updates are:
 
         w   linearly decreases from w_max -> w_min across iterations
         v_i = w * v_i + c1 * r1 * (pbest_i - x_i) + c2 * r2 * (gbest - x_i)
         x_i = x_i + v_i
 
-DE handles exploration, GWO pulls candidates toward the current top
-three, and PSO adds memory and momentum for fine-tuning. Each iteration
-costs roughly 3 * population_size objective calls.
+DE is used for exploration, GWO pulls candidates toward the current top
+three, and PSO contributes memory and momentum for refinement. Each
+iteration costs approximately 3 * population_size objective evaluations.
 
 Optuna-style API:
 
@@ -210,32 +210,36 @@ class HDGPSO:
     Parameters
     ----------
     space : SearchSpace or dict[str, Dimension]
-        Hyperparameter search space.
+        The hyperparameter search space.
     objective : callable(dict) -> float
-        Objective function; lower is better.
+        The objective function to minimize. Lower values are better.
     population_size : int
-        Number of candidates per iteration.
+        Number of candidates maintained per iteration.
     iterations : int
-        Number of optimization iterations. Each iteration evaluates
-        ~3*population_size objective calls (DE + GWO + PSO).
+        Number of optimization iterations. Each iteration runs all
+        three stages, which corresponds to approximately
+        3 * population_size objective evaluations per iteration.
     F : float
-        DE differential weight (mutation strength).
+        Differential evolution mutation weight.
     CR : float
-        DE crossover probability.
+        Differential evolution crossover probability.
     c1, c2 : float
-        PSO cognitive (pbest) and social (gbest) acceleration coefficients.
+        Cognitive (pbest) and social (gbest) acceleration coefficients
+        used by the PSO velocity update.
     w_max, w_min : float
-        PSO inertia weight at start and end; linearly interpolated across
-        iterations so the swarm explores early and refines late.
+        Starting and ending values for the PSO inertia weight. The
+        value is linearly interpolated between them across iterations,
+        so the swarm explores at the start and refines at the end.
     early_stop_patience : int, optional
-        Stop after this many consecutive iterations without best-loss
-        improvement. Disabled if None.
+        Stop after this many consecutive iterations without an
+        improvement in best loss. Disabled if None.
     time_budget_seconds : float, optional
-        Stop when wall-clock exceeds this. Disabled if None.
+        Stop when wall-clock time exceeds this number of seconds.
+        Disabled if None.
     seed : int, optional
-        RNG seed for reproducibility.
+        Random seed used to initialize the internal generators.
     verbose : bool
-        Per-iteration progress logging.
+        If True, log per-iteration progress messages.
     """
 
     name = "HDGPSO"
@@ -345,11 +349,13 @@ class HDGPSO:
     # -- Surrogate-assisted candidate selection -----------------------------
 
     def _refit_surrogate(self, iteration: int) -> None:
-        """Refit a RandomForest surrogate from (params, loss) history.
+        """Refit the RandomForest surrogate on the (params, loss) history.
 
-        Lightweight: 30 trees, no normalization needed since we work in the
-        SearchSpace's internal coordinates. Periodic refit (every K iters)
-        keeps the surrogate fresh while not dominating runtime.
+        The surrogate is small (30 trees) and does not require feature
+        normalization, because all training points are already expressed
+        in the SearchSpace internal coordinates. The refit is performed
+        once every few iterations so that the model stays current
+        without dominating the runtime.
         """
         if not self.use_surrogate:
             return
@@ -390,28 +396,36 @@ class HDGPSO:
         self._last_surrogate_refit_at = iteration
 
     def _surrogate_predict_with_std(self, X: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        """Return (mean, std) predictions from the RF surrogate.
+        """Return (mean, std) predictions from the RandomForest surrogate.
 
-        Tree-variance approximates epistemic uncertainty: regions of the
-        space sparsely covered by training data have trees disagreeing,
-        producing high std. This is the discrete analog of a GP's
-        predictive variance and enables proper UCB acquisition.
+        The standard deviation across trees is used as a proxy for
+        epistemic uncertainty. In regions of the search space that are
+        sparsely covered by training points, the individual trees tend
+        to disagree, which produces a larger spread. This serves as a
+        discrete analog of the predictive variance from a Gaussian
+        Process and is what allows the UCB-style acquisition below.
         """
         per_tree = np.stack([t.predict(X) for t in self._surrogate.estimators_])
         return per_tree.mean(axis=0), per_tree.std(axis=0)
 
     def _surrogate_filter(self, base: np.ndarray) -> np.ndarray:
-        """Generate K nearby alternatives, score each by UCB acquisition,
-        return the candidate with the lowest UCB (= best balance of low
-        predicted loss and high uncertainty).
+        """Score K nearby alternatives and return the one with the
+        lowest acquisition value.
 
-        Acquisition: UCB(x) = mean(x) - kappa * std(x)
-          - Pure exploit  (kappa=0):   pick predicted best
-          - Pure explore  (kappa=large): pick most uncertain
-          - kappa=1.5:    LCB / standard Bayesian Optimization default
+        The filter generates K Gaussian-perturbed neighbors of the input
+        candidate and asks the surrogate to score each one. The score is
+        the lower confidence bound (LCB):
 
-        We use the *lower* confidence bound because losses are
-        minimized; equivalent to the negative-UCB used in BO maximization.
+            LCB(x) = mean(x) - kappa * std(x)
+
+        With kappa = 0 the filter picks the candidate with the lowest
+        predicted loss (pure exploit). With a large kappa it picks the
+        most uncertain one (pure explore). The value kappa = 1.5 is the
+        common Bayesian Optimization default.
+
+        The LCB form is used because the objective is being minimized,
+        which is equivalent to the negative UCB used in BO when the
+        objective is being maximized.
         """
         if self._surrogate is None or not self.use_surrogate:
             return base
@@ -429,12 +443,16 @@ class HDGPSO:
             return base
 
     def _maybe_restart(self) -> bool:
-        """If best loss hasn't improved for `restart_patience` iters,
-        randomize the worst `restart_fraction` of the population.
+        """Optionally restart part of the population when the search
+        has stagnated.
 
-        Compresses run-to-run variance by escaping stagnation. The
-        retained best half preserves accumulated knowledge; the
-        randomized worst half injects diversity.
+        If the best loss has not improved for `restart_patience`
+        iterations, the worst `restart_fraction` of the population is
+        replaced by freshly sampled random points. The top half is
+        kept, so that accumulated knowledge is preserved, while the
+        bottom half is reseeded with diversity. This reduces run-to-run
+        variance in cases where the search settles into a local basin
+        early.
         """
         if self.restart_patience is None:
             return False

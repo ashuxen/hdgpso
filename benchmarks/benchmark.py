@@ -1,14 +1,15 @@
-"""Benchmark harness: tuners x models x datasets x seeds.
+"""Benchmark harness across tuners, models, datasets, and seeds.
 
-Runs all registered tuners on a configurable set of (dataset, model) tasks
-and writes per-trial history + per-run summary to CSV.
+This script runs every registered tuner on a configurable set of
+(dataset, model) tasks and writes the per-trial history together
+with a per-run summary to CSV.
 
-CLI usage:
+Command-line usage:
     python benchmark.py --budget 60 --seeds 3 --out results/
 
-Programmatic:
+Programmatic usage:
     from benchmark import run_benchmark
-    summary, history = run_benchmark(budget=60, seeds=[0,1,2])
+    summary, history = run_benchmark(budget=60, seeds=[0, 1, 2])
 """
 from __future__ import annotations
 
@@ -66,10 +67,13 @@ def _safe_fetch_openml(name: str, version: int = 1):
 
 
 def get_datasets(include_openml: bool = True, include_deep: bool = False) -> Dict[str, Dict[str, Any]]:
-    """Return {dataset_name: {'X':..., 'y':..., 'task':...}}.
+    """Return a dictionary of available datasets keyed by name.
 
-    If include_deep=True, also adds a synthetic 'pinn_heat' placeholder
-    (X/y are dummies; the objective ignores them).
+    Each value is a small dictionary with the input matrix X, the
+    target vector y, and a ``task`` string. When ``include_deep`` is
+    True, a synthetic ``pinn_heat`` placeholder is added; in that case
+    X and y are dummies, because the PINN objective generates its own
+    data internally.
     """
     out: Dict[str, Dict[str, Any]] = {}
 
@@ -220,7 +224,7 @@ def make_objective(
     cv: int,
     seed: int,
 ) -> Callable[[Dict[str, Any]], float]:
-    """Return objective that maps params -> loss (lower is better)."""
+    """Return an objective function that maps hyperparameters to a loss value (lower is better)."""
 
     # Deep-net dispatch
     if model_name == "MLP":
@@ -358,10 +362,12 @@ def run_benchmark(
     out_dir: Optional[str] = None,
     verbose: bool = True,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """Run the full benchmark grid; return (summary_df, history_df).
+    """Run the full benchmark grid and return ``(summary_df, history_df)``.
 
-    Skips (dataset, model) pairs that don't make sense (e.g. MLP on
-    regression datasets, sklearn models on the pinn_heat placeholder).
+    Incompatible (dataset, model) pairs are skipped automatically.
+    Examples of skipped combinations are the MLP applied to regression
+    datasets, or any sklearn model applied to the ``pinn_heat``
+    placeholder dataset.
     """
     all_ds = get_datasets(include_openml=include_openml, include_deep=include_deep)
     if datasets is not None:
@@ -465,12 +471,12 @@ def run_budget_sweep(
     out_dir: Optional[str] = None,
     verbose: bool = True,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """Run the full benchmark at each budget in `budgets`.
+    """Run the full benchmark grid once for each budget in ``budgets``.
 
-    Each row of the resulting summary has an extra `budget` column so you
-    can compare rank-vs-budget curves per tuner.
-
-    Returns (summary_df, history_df) concatenated across budgets.
+    Each row of the resulting summary has an extra ``budget`` column,
+    which makes it possible to compare rank-versus-budget curves for
+    each tuner. The function returns ``(summary_df, history_df)``,
+    where the frames are concatenated across the budgets evaluated.
     """
     all_summary: List[pd.DataFrame] = []
     all_history: List[pd.DataFrame] = []
@@ -575,7 +581,7 @@ def run_budget_sweep(
 
 
 def aggregate(summary_df: pd.DataFrame) -> pd.DataFrame:
-    """Aggregate summary across seeds: mean and std of best_loss per (dataset, model, tuner)."""
+    """Aggregate the summary across seeds and return mean and std of best_loss per (dataset, model, tuner)."""
     agg = (
         summary_df.groupby(["dataset", "model", "tuner"])["best_loss"]
         .agg(["mean", "std", "min", "count"])
@@ -585,9 +591,10 @@ def aggregate(summary_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def rank_table(summary_df: pd.DataFrame) -> pd.DataFrame:
-    """For each (dataset, model, seed), rank tuners by best_loss (1 = best).
+    """Rank tuners by best_loss within each (dataset, model, seed) cell and average.
 
-    Returns mean rank per tuner across all cells. Lower is better.
+    The result is a DataFrame containing the mean rank per tuner
+    across all cells. Lower values indicate better performance.
     """
     df = summary_df.copy()
     df["rank"] = df.groupby(["dataset", "model", "seed"])["best_loss"].rank(method="min")

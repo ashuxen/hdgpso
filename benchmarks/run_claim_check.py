@@ -1,10 +1,13 @@
-"""Run the claim-check benchmark and evaluate all 6 paper claims.
+"""Run the claim-check benchmark and evaluate the six paper claims.
 
-Config sized for ~1-1.5 hr on a typical workstation: 4 datasets x 2 models
-x 7 tuners x 3 seeds = 168 cells. Statistically meaningful (n=24 per tuner)
-while finishing in a single check loop.
+The grid is sized to finish in roughly 1 to 1.5 hours on a typical
+workstation: 4 datasets paired with 2 model classes, evaluated under
+7 tuners and 3 random seeds, which gives 168 cells in total. Each
+tuner therefore sees 24 cells, which is enough to support the
+rank-based comparisons used to verify the claims.
 
-Writes:
+The script writes:
+
   results_claim_check/summary.csv
   results_claim_check/history.csv
   results_claim_check/claims_report.txt
