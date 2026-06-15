@@ -12,6 +12,12 @@ On the benchmark used in the paper, HDGPSO achieves the lowest mean rank at the 
 ## Install
 
 ```bash
+pip install hdgpso
+```
+
+Latest development version from GitHub:
+
+```bash
 pip install git+https://github.com/ashuxen/hdgpso.git
 ```
 
