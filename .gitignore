@@ -38,7 +38,14 @@ benchmarks/data/
 
 # Benchmark outputs (large, regenerable)
 results/
-results_*/
+results_*/*
+# per-cell results behind the reported ranks, tables and figures
+!results_claim_check_v5/summary.csv
+!results_smac/summary.csv
+!results_smac/summary_budget_sweep.csv
+!results_budget_sweep/summary_budget_sweep.csv
+!results_resnet/summary.csv
+!results_resnet/history.csv
 report.log
 
 # Smoke / preflight / probe scripts and their logs (temporary research artifacts).
