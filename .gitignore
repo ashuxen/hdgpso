@@ -30,6 +30,12 @@ env/
 Thumbs.db
 desktop.ini
 
+# Downloaded datasets (CIFAR-10 is ~341 MB; resnet_objective.py fetches it
+# on first run via torchvision, into a data/ dir beside itself)
+data/
+benchmarks/data/
+*.tar.gz
+
 # Benchmark outputs (large, regenerable)
 results/
 results_*/
